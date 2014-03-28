@@ -1,5 +1,5 @@
 /* ========================================================================
- * Bootstrap: datepicker.js v1.0.0
+ * Bootstrap: datepicker.js v1.0.5
  * ========================================================================
  * Requires moment.js for formatting and date checking
  *
@@ -34,11 +34,11 @@
                                     '<th colspan="7" class="month"></th>' +
                                 '</tr>' +
                                 '<tr>' +
-                                    '<th class="prevyear">&lsaquo;&lsaquo;</th>' +
-                                    '<th class="prevmonth">&lsaquo;</th>' +
+                                    '<th><div class="prevyear">&lsaquo;&lsaquo;</div></th>' +
+                                    '<th><div class="prevmonth">&lsaquo;</div></th>' +
                                     '<th colspan="3"></th>' +
-                                    '<th class="nextmonth">&rsaquo;</th>' +
-                                    '<th class="nextyear">&rsaquo;&rsaquo;</th>' +
+                                    '<th><div class="nextmonth">&rsaquo;</div></th>' +
+                                    '<th><div class="nextyear">&rsaquo;&rsaquo;</div></th>' +
                                 '</tr>' +
                             '</thead>' +
                             '<tbody>' +
@@ -52,13 +52,18 @@
     // ===========================
     
     var Datepicker = function(element, options) {
+    
         this.$element = $(element);
+        
+        this.$element.parent()
+                .addClass('dropdown');
+        
         this.options = options;
         this.$picker = $(GLOBAL.template);
         
-        this.shown = false;         // true if calendar is shown
+        this.shown = false;             // true if calendar is shown
         this.focused = false;           // true if the input element has focus
-        this.mousedover = false;            // true if the mouse is over the calendar
+        this.mousedover = false;        // true if the mouse is over the calendar
         
         this.dateSelected = false;      // _moment object tracking the element value
         this.dateShown = _moment();     // _moment object the calendar is showing
@@ -96,8 +101,8 @@
         // Proxied event handles for the calendar
         this.$picker
                 .on('click', $.proxy(this.click, this))
-                .on('mouseenter', 'td, th', $.proxy(this.mouseenter, this))
-                .on('mouseleave', 'td, th', $.proxy(this.mouseleave, this));
+                .on('mouseenter', 'div', $.proxy(this.mouseenter, this))
+                .on('mouseleave', 'div', $.proxy(this.mouseleave, this));
     };
     
     Datepicker.prototype.destroy = function () {
@@ -115,18 +120,16 @@
     Datepicker.prototype.fillWeekdays = function () {
         var row = $('<tr>');
         $.each(GLOBAL.weekdays, function (index, value) {
-            row.append('<th>' + value + '</th>');
+            row.append('<th class="weekday">' + value + '</th>');
         });
         this.$picker.find('thead').append(row);
         return this;
     };
     
     Datepicker.prototype.fill = function () {
-        console.log(this.dateShown ? this.dateShown.format('YYYY-MM-DD') : 'None');
         var date = _moment(this.dateShown);
         var monthStart = _moment(date).startOf('month');
         var monthEnd = _moment(date).endOf('month');
-        var current = this.dateSelected && this.dateSelected.valueOf();
         var d, stop;
         
         this.$picker.find('.month').text(date.format('MMMM YYYY'));
@@ -140,23 +143,25 @@
         
         // Detach the tbody and reattach after messing with it
         var $tbody = this.$picker.find('tbody').detach();
-        var $tr, $td;
+        var $tr, $div;
         // Empty the calendar
         $tbody.empty();
         // Fill calendar until stop is reached
         while (date.isBefore(stop, 'day')) {
             if (date.day() === 0)
                 $tr = $('<tr>');
-            $td = $('<td>')
-                    .addClass('day')
-                    .text(date.date())
-                    .appendTo($tr)
+            $div = $('<div class="day">' + date.date() + '</div>');
+            $('<td>')
+                    .append($div)
+                    .appendTo($tr);
             if (date.isBefore(monthStart, 'month'))
-                $td.addClass('prev');
+                $div.addClass('prev');
             if (date.isAfter(monthEnd, 'month'))
-                $td.addClass('next');
-            if (current && date.isSame(current, 'day'))
-                $td.addClass('selected');
+                $div.addClass('next');
+            if (date.isSame(this.dateSelected, 'day'))
+                $div.addClass('selected');
+            if (date.isSame(moment(), 'day'))
+                $div.addClass('today');
             if (date.day() === 6)
                 $tr.appendTo($tbody);
             date.add('day', 1);
@@ -169,7 +174,7 @@
         if (!redrawOnly) {
             // Checking dates to make sure what was entered is correct
             this.dateSelected = _moment(this.$element.val(), this.options.formats, true)
-            this.dateShown = this.dateSelected.isValid() ? this.dateSelected : _moment();
+            this.dateShown = this.dateSelected.isValid() ? _moment(this.dateSelected) : _moment();
         }
         this.fill();
         return this;
@@ -302,7 +307,7 @@
     Datepicker.prototype.click = function (event) {
         event.stopPropagation();
         event.preventDefault();
-        var $target = $(event.target).closest('td, th');
+        var $target = $(event.target).closest('div');
         if ($target.is('.day')) {
             this.select();
             return;
@@ -329,7 +334,7 @@
     Datepicker.prototype.mouseenter = function (event) {
         this.mousedover = true;
         this.$picker.find('.active').removeClass('active');
-        if ($(event.currentTarget).is('.day'))
+        if ($(event.currentTarget).is('.day, .prevyear, .prevmonth, .nextyear, .nextmonth'))
             $(event.currentTarget).addClass('active');
     };
     
